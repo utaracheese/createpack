@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Resource Pack Builder</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <h2>📦 Pack Builder</h2>
+      <nav>
+        <button class="nav-btn active" data-tab="pack">📦 Pack Metadata</button>
+        <button class="nav-btn" data-tab="item">🖼 Items</button>
+        <button class="nav-btn" data-tab="block">🧱 Blocks</button>
+        <button class="nav-btn" data-tab="gui">🎨 GUI</button>
+        <button class="nav-btn" data-tab="skybox">🌌 Skybox</button>
+        <button class="nav-btn" data-tab="settings">⚙ Settings & Project</button>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <!-- Section: Pack Metadata -->
+      <section id="tab-pack" class="tab-content active">
+        <div class="section-header-with-icon">
+          <h2>Thiết lập Resource Pack</h2>
+          <div class="pack-icon-container">
+            <div class="icon-preview-wrapper" title="Click để chọn Icon Pack (pack.png)">
+              <img id="packIconPreview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='1.5'><rect x='3' y='3' width='18' height='18' rx='2'/><circle cx='8.5' cy='8.5' r='1.5'/><path d='M21 15l-5-5L5 21'/></svg>" alt="Pack Icon">
+              <input type="file" id="packIconInput" accept=".png" style="display:none;">
+            </div>
+            <div class="icon-actions">
+              <button id="uploadIconBtn" class="btn btn-sm">📷 Tải Icon (pack.png)</button>
+              <button id="removeIconBtn" class="btn btn-danger btn-sm" style="display:none;">Xóa Icon</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="packName">Tên Pack (Pack Name):</label>
+          <input type="text" id="packName" value="My Custom Resource Pack" placeholder="Ví dụ: Blue Energy">
+        </div>
+
+        <!-- Chế độ chọn Version -->
+        <div class="form-group">
+          <label>Chế độ Minecraft Version:</label>
+          <div class="radio-group">
+            <label><input type="radio" name="verMode" value="single" checked> Single (Đơn)</label>
+            <label><input type="radio" name="verMode" value="range"> Range (Đôi - 1.21.9+)</label>
+          </div>
+        </div>
+
+        <!-- Container Version Đơn -->
+        <div id="single-version-box" class="form-group">
+          <label for="mcVersion">Minecraft Version:</label>
+          <select id="mcVersion"></select>
+          <small class="help-text">Tự động quy đổi ra <b>pack_format</b> tương ứng.</small>
+        </div>
+
+        <!-- Container Version Đôi (Range) -->
+        <div id="range-version-box" class="form-group" style="display: none;">
+          <div class="grid-2col">
+            <div>
+              <label for="mcMinVersion">Min Version (Thấp nhất):</label>
+              <select id="mcMinVersion"></select>
+            </div>
+            <div>
+              <label for="mcMaxVersion">Max Version (Cao nhất):</label>
+              <select id="mcMaxVersion"></select>
+            </div>
+          </div>
+          <small class="help-text">Cấu hình xuất JSON: <b>min_format</b> & <b>max_format</b> (Chỉ dành cho 1.21.9+).</small>
+        </div>
+
+        <div class="form-group">
+          <label for="packDescription">Description:</label>
+          <textarea id="packDescription" rows="3" placeholder="Nhập mô tả cho pack của bạn..."></textarea>
+        </div>
+      </section>
+
+      <!-- Section: Items -->
+      <section id="tab-item" class="tab-content">
+        <h2>Thêm Item Texture</h2>
+        <div class="asset-form-vertical">
+          <div class="form-row">
+            <input type="text" id="item-id" list="item-suggestions" placeholder="Nhập ID (Ví dụ: diamond, ruby_sword)">
+            <datalist id="item-suggestions"></datalist>
+            <input type="file" id="item-file" accept=".png">
+          </div>
+          
+          <div class="form-row animation-box">
+            <label class="checkbox-label">
+              <input type="checkbox" id="item-has-anim"> Thêm Animation (.mcmeta)
+            </label>
+            <div id="item-anim-options" style="display: none; align-items: center; gap: 8px;">
+              <label for="item-frametime">Frametime:</label>
+              <input type="number" id="item-frametime" value="1" min="1" style="width: 80px;">
+            </div>
+          </div>
+
+          <button id="add-item-btn" class="btn btn-add">Add Item</button>
+        </div>
+        <div id="item-list" class="asset-grid"></div>
+      </section>
+
+      <!-- Section: Blocks -->
+      <section id="tab-block" class="tab-content">
+        <h2>Thêm Block Texture</h2>
+        <div class="asset-form">
+          <input type="text" id="block-id" list="block-suggestions" placeholder="Nhập ID (Ví dụ: stone, ruby_block)">
+          <datalist id="block-suggestions"></datalist>
+          <input type="file" id="block-file" accept=".png">
+          <button id="add-block-btn" class="btn btn-add">Add Block</button>
+        </div>
+        <div id="block-list" class="asset-grid"></div>
+      </section>
+
+      <!-- Section: GUI -->
+      <section id="tab-gui" class="tab-content">
+        <h2>Thêm GUI Texture</h2>
+        <div class="asset-form-box">
+          <h3>1. Recipe Book GUI (assets/minecraft/textures/gui/recipe_book.png)</h3>
+          <div class="asset-form">
+            <input type="file" id="gui-recipe-file" accept=".png">
+            <button id="add-gui-recipe-btn" class="btn btn-add">Thêm Recipe Book</button>
+          </div>
+        </div>
+
+        <div class="asset-form-box" style="margin-top: 15px;">
+          <h3>2. Container GUI (assets/minecraft/textures/gui/container/têngui.png)</h3>
+          <div class="asset-form">
+            <input type="text" id="gui-container-id" list="gui-suggestions" placeholder="Tên GUI">
+            <datalist id="gui-suggestions"></datalist>
+            <input type="file" id="gui-container-file" accept=".png">
+            <button id="add-gui-container-btn" class="btn btn-add">Thêm Container GUI</button>
+          </div>
+        </div>
+
+        <div id="gui-list" class="asset-grid" style="margin-top: 20px;"></div>
+      </section>
+
+      <!-- Section: Skybox -->
+      <section id="tab-skybox" class="tab-content">
+        <h2>Thêm Skybox / Cloud Texture</h2>
+        <div class="asset-form-vertical">
+          <div class="form-group">
+            <label>Loại Mod áp dụng:</label>
+            <div class="radio-group">
+              <label><input type="radio" name="sky-mod" value="optifine" checked> OptiFine</label>
+              <label><input type="radio" name="sky-mod" value="mcpatcher"> MCPatcher</label>
+              <label><input type="radio" name="sky-mod" value="both"> Cả hai (OptiFine & MCPatcher)</label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <select id="sky-type" style="flex: 1;">
+              <option value="sky">Sky (Tự động đặt tên: sky1, sky2...)</option>
+              <option value="cloud">Cloud (Tự động đặt tên: cloud1, cloud2...)</option>
+            </select>
+            <input type="file" id="sky-file" accept=".png" style="flex: 2;">
+          </div>
+
+          <div class="sky-settings-box">
+            <h4>⚙ Settings (.properties)</h4>
+            <div class="grid-2col">
+              <div>
+                <label>startFadeIn:</label>
+                <input type="text" id="sky-startFadeIn" value="06:00" placeholder="06:00">
+              </div>
+              <div>
+                <label>endFadeIn:</label>
+                <input type="text" id="sky-endFadeIn" value="07:00" placeholder="07:00">
+              </div>
+              <div>
+                <label>startFadeOut:</label>
+                <input type="text" id="sky-startFadeOut" value="17:30" placeholder="17:30">
+              </div>
+              <div>
+                <label>endFadeOut:</label>
+                <input type="text" id="sky-endFadeOut" value="18:00" placeholder="18:00">
+              </div>
+              <div>
+                <label>rotate (Xoay):</label>
+                <select id="sky-rotate">
+                  <option value="true">true</option>
+                  <option value="false">false</option>
+                </select>
+              </div>
+              <div>
+                <label>axis (Trục xoay):</label>
+                <input type="text" id="sky-axis" value="0.0 -0.1 0.0">
+              </div>
+            </div>
+          </div>
+
+          <button id="add-sky-btn" class="btn btn-add" style="margin-top: 15px;">Add Skybox</button>
+        </div>
+
+        <div id="skybox-list" class="asset-grid" style="margin-top: 20px;"></div>
+      </section>
+
+      <!-- Section: Settings -->
+      <section id="tab-settings" class="tab-content">
+        <h2>Quản lý Dự Án</h2>
+        <div class="project-actions">
+          <button id="save-project-btn" class="btn">💾 Save Project (.json)</button>
+          <input type="file" id="load-project-file" accept=".json" style="display:none">
+          <button id="load-project-btn" class="btn">📂 Load Project</button>
+          <button id="clear-project-btn" class="btn btn-danger">🗑 Clear Project</button>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer-bar">
+        <div class="status-summary">
+          <span id="stat-item">✓ 0 Items</span>
+          <span id="stat-block">✓ 0 Blocks</span>
+          <span id="stat-gui">✓ 0 GUI</span>
+          <span id="stat-skybox">✓ 0 Skybox</span>
+        </div>
+        <button id="build-btn" class="btn btn-build">🚀 BUILD RESOURCE PACK</button>
+      </footer>
+    </main>
+  </div>
+
+  <script src="js/versions.js"></script>
+  <script src="js/idConfig.js"></script>
+  <script src="js/validator.js"></script>
+  <script src="js/modules.js"></script>
+  <script src="js/zipBuilder.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
