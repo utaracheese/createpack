@@ -88,6 +88,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function bindEvents() {
+    const welcomeModal = document.getElementById("welcome-modal");
+    const startAppBtn = document.getElementById("start-app-btn");
+      
+    if (startAppBtn && welcomeModal) {
+      startAppBtn.addEventListener("click", () => {
+        welcomeModal.style.display = "none";
+      });
+    }
     // Pack Icon Upload Event Handlers
     const iconInput = document.getElementById("packIconInput");
     const uploadIconBtn = document.getElementById("uploadIconBtn");

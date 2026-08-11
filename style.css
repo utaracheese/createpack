@@ -369,3 +369,153 @@ input[type="text"]:focus, select:focus, textarea:focus {
   padding: 6px;
   font-size: 0.85rem;
 }
+
+/* ================= WELCOME MODAL STYLES ================= */
+.welcome-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.welcome-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 850px; /* Bảng rộng thật to */
+  padding: 35px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.welcome-content {
+  display: flex;
+  gap: 35px;
+  align-items: center;
+}
+
+/* Cột trái - QR Code */
+.welcome-left {
+  flex: 0 0 280px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #141414;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.qr-code-img {
+  width: 100%;
+  max-width: 250px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* Cột phải - Thông tin */
+.welcome-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 280px;
+}
+
+.welcome-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--accent-green);
+  padding-bottom: 8px;
+}
+
+.welcome-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+.info-row {
+  font-size: 0.95rem;
+  color: #d1d1d1;
+  line-height: 1.5;
+}
+
+/* Nút Bắt đầu sử dụng */
+.btn-start {
+  align-self: flex-end; /* Đặt ở góc phải bên dưới */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #2b2b2b;
+  color: #ffffff;
+  border: 1px solid var(--border-color);
+  padding: 10px 18px 10px 24px;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-start:hover {
+  background-color: #383838;
+  border-color: var(--accent-green);
+  transform: translateY(-2px);
+}
+
+.arrow-icon {
+  width: 36px;
+  height: 36px;
+  background-color: var(--accent-green);
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.btn-start:hover .arrow-icon {
+  background-color: var(--accent-green-hover);
+  transform: translateX(4px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Responsive cho màn hình nhỏ */
+@media (max-width: 768px) {
+  .welcome-content {
+    flex-direction: column;
+  }
+  .welcome-left {
+    flex: none;
+    width: 100%;
+  }
+  .welcome-right {
+    min-height: auto;
+  }
+  .btn-start {
+    align-self: center;
+    width: 100%;
+    justify-content: center;
+  }
+}
