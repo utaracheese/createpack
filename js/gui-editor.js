@@ -18,14 +18,38 @@ const btnFlipV = document.getElementById('btn-flip-v');
 
 let draggedLayerItem = null;
 
-/* ===== 1. CÂU TRÚC THƯ MỤC CÓ [+] / [-] VÀ TÌM KIẾM ===== */
-/* ================= THƯ MỤC CHUẨN VS CODE ================= */
+/* ================= 1. QUẢN LÝ LƯU TRỮ TRẠNG THÁI TICK (LOCALSTORAGE) ================= */
+const GUI_DONE_STORAGE_KEY = 'mc_pack_studio_gui_checked_status';
+
+function getGuiDoneList() {
+    try {
+        const raw = localStorage.getItem(GUI_DONE_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function setGuiDoneStatus(id, isDone) {
+    const list = getGuiDoneList();
+    if (isDone) {
+        list[id] = true;
+    } else {
+        delete list[id];
+    }
+    localStorage.setItem(GUI_DONE_STORAGE_KEY, JSON.stringify(list));
+}
+
+/* ================= 2. THƯ MỤC CHUẨN VS CODE CÓ CHECKBOX ================= */
 function initFolderTree() {
     const container = document.getElementById('folder-tree-container');
+    if (!container) return;
     container.innerHTML = '';
 
     const rootWrapper = document.createElement('div');
     rootWrapper.className = 'vscode-tree';
+
+    const doneList = getGuiDoneList();
 
     function createTreeNode(node, depth = 0) {
         const isFolder = Array.isArray(node.children);
@@ -66,7 +90,12 @@ function initFolderTree() {
             // File ảnh (.png)
             row.dataset.id = node.id;
             row.dataset.name = node.name.toLowerCase();
+
+            const isDone = !!doneList[node.id];
+            if (isDone) row.classList.add('is-done');
+
             row.innerHTML = `
+                <input type="checkbox" class="tree-gui-check" id="check-${node.id}" title="Đánh dấu GUI đã hoàn thành" ${isDone ? 'checked' : ''}>
                 <span class="file-img-icon">
                     <svg viewBox="0 0 16 16" width="13" height="13" fill="#a78bfa"><path d="M14 3H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1zM2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H2z"/><circle cx="4.5" cy="6.5" r="1.5"/><path d="M15 12l-4.5-4.5L6 12h9z"/></svg>
                 </span>
@@ -74,6 +103,16 @@ function initFolderTree() {
                 <span class="badge-saved" style="display:none;" id="badge-${node.id}">Saved</span>
             `;
 
+            // Xử lý sự kiện click checkbox (ngăn chặn lan truyền click lên hàng)
+            const checkbox = row.querySelector('.tree-gui-check');
+            checkbox.onclick = (e) => {
+                e.stopPropagation();
+                const checked = e.target.checked;
+                row.classList.toggle('is-done', checked);
+                setGuiDoneStatus(node.id, checked);
+            };
+
+            // Chọn GUI khi bấm vào hàng
             row.onclick = (e) => {
                 e.stopPropagation();
                 document.querySelectorAll('.tree-file-row').forEach(r => r.classList.remove('active'));
@@ -99,7 +138,7 @@ function initFolderTree() {
                 const match = row.dataset.name.includes(term) || row.dataset.id.includes(term);
                 row.style.display = match ? 'flex' : 'none';
                 
-                // Tự động mở thư mục cha nếu có file khớp
+                // Tự động mở rộng thư mục cha nếu có file tìm thấy
                 if (match && term.length > 0) {
                     let parent = row.closest('.tree-children');
                     while (parent) {
@@ -254,20 +293,19 @@ function drawBoundingBox(context, t) {
     context.strokeStyle = '#0099ff';
     const sz = 6 / state.zoom;
     Object.values(handles).forEach(p => {
-        context.fillRect(p.x - sz/2, p.y - sz/2, sz, sz);
-        context.strokeRect(p.x - sz/2, p.y - sz/2, sz, sz);
+        context.fillRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
+        context.strokeRect(p.x - sz / 2, p.y - sz / 2, sz, sz);
     });
 
     context.restore();
 }
 
-/* ===== 2. QUẢN LÝ LAYER VỚI KÉO THẢ DRAG & DROP TRỰC TIẾP ===== */
+/* ================= 3. QUẢN LÝ LAYER VÀ KÉO THẢ (DRAG & DROP) ================= */
 function renderLayersList() {
     const list = document.getElementById('layers-list');
+    if (!list) return;
     list.innerHTML = '';
 
-    // Tạo danh sách tổng hợp gồm các Layer và Layer GUI mốc
-    // Thứ tự hiển thị trực quan: Top (Trên cùng) -> Bottom (Dưới cùng)
     const renderItems = [];
     for (let i = state.layers.length - 1; i >= state.guiLayerIndex; i--) {
         renderItems.push({ type: 'layer', index: i, tag: '✨ (Trên GUI)' });
@@ -368,14 +406,11 @@ function reorderLayerByDrop(fromIdx, targetType, targetIdx, isBelow) {
     if (fromIdx < state.guiLayerIndex) state.guiLayerIndex--;
 
     if (targetType === 'barrier') {
-        // Thả trực tiếp vào mốc GUI
         if (isBelow) {
-            // Thả xuống dưới GUI
             state.layers.splice(state.guiLayerIndex, 0, layer);
             state.selectedLayerIndex = state.guiLayerIndex;
             state.guiLayerIndex++;
         } else {
-            // Thả lên trên GUI
             state.layers.splice(state.guiLayerIndex, 0, layer);
             state.selectedLayerIndex = state.guiLayerIndex;
         }
@@ -388,7 +423,6 @@ function reorderLayerByDrop(fromIdx, targetType, targetIdx, isBelow) {
         state.layers.splice(insertIdx, 0, layer);
         state.selectedLayerIndex = insertIdx;
 
-        // Cập nhật lại ranh giới mốc GUI tự động
         if (insertIdx < state.guiLayerIndex && wasAboveGui) {
             state.guiLayerIndex++;
         } else if (insertIdx >= state.guiLayerIndex && !wasAboveGui) {
@@ -412,12 +446,14 @@ window.deleteLayerAt = function(idx) {
     requestRender();
 };
 
-/* ===== 3. BINDINGS & CANVAS EVENTS ===== */
+/* ================= 4. BINDINGS & CANVAS EVENTS ================= */
 function initPropertyBindings() {
     const fileUpload = document.getElementById('unified-image-upload');
-    fileUpload.onchange = (e) => {
-        if (e.target.files) handleEditorImageUpload(e.target.files);
-    };
+    if (fileUpload) {
+        fileUpload.onchange = (e) => {
+            if (e.target.files) handleEditorImageUpload(e.target.files);
+        };
+    }
 
     workspace.addEventListener('dragover', (e) => e.preventDefault());
     workspace.addEventListener('drop', (e) => {
@@ -425,69 +461,85 @@ function initPropertyBindings() {
         if (e.dataTransfer.files) handleEditorImageUpload(e.dataTransfer.files);
     });
 
-    document.getElementById('btn-ai-remove-bg').onclick = aiRemoveBackgroundCurrentLayer;
+    const aiBtn = document.getElementById('btn-ai-remove-bg');
+    if (aiBtn) aiBtn.onclick = aiRemoveBackgroundCurrentLayer;
 
-    document.getElementById('btn-fit').onclick = () => {
-        const l = getActiveLayer(); if (!l) return;
-        l.width = state.guiWidth; l.height = state.guiHeight;
-        l.x = 0; l.y = 0;
-        updateProperties(); requestRender(); saveHistory();
-    };
+    const fitBtn = document.getElementById('btn-fit');
+    if (fitBtn) {
+        fitBtn.onclick = () => {
+            const l = getActiveLayer(); if (!l) return;
+            l.width = state.guiWidth; l.height = state.guiHeight;
+            l.x = 0; l.y = 0;
+            updateProperties(); requestRender(); saveHistory();
+        };
+    }
 
-    document.getElementById('btn-reset').onclick = () => {
-        const l = getActiveLayer(); if (!l) return;
-        l.rotation = 0; l.opacity = 1; l.flipX = false; l.flipY = false;
-        updateProperties(); requestRender(); saveHistory();
-    };
+    const resetBtn = document.getElementById('btn-reset');
+    if (resetBtn) {
+        resetBtn.onclick = () => {
+            const l = getActiveLayer(); if (!l) return;
+            l.rotation = 0; l.opacity = 1; l.flipX = false; l.flipY = false;
+            updateProperties(); requestRender(); saveHistory();
+        };
+    }
 
-    document.getElementById('btn-delete').onclick = () => {
-        if (state.selectedLayerIndex !== null) deleteLayerAt(state.selectedLayerIndex);
-    };
+    const delBtn = document.getElementById('btn-delete');
+    if (delBtn) {
+        delBtn.onclick = () => {
+            if (state.selectedLayerIndex !== null) deleteLayerAt(state.selectedLayerIndex);
+        };
+    }
 
-    propX.onchange = (e) => { const l = getActiveLayer(); if (l) { l.x = parseFloat(e.target.value) || 0; requestRender(); saveHistory(); } };
-    propY.onchange = (e) => { const l = getActiveLayer(); if (l) { l.y = parseFloat(e.target.value) || 0; requestRender(); saveHistory(); } };
-    propW.onchange = (e) => { 
-        const l = getActiveLayer(); 
-        if (l) { 
-            l.width = parseFloat(e.target.value) || 10;
-            if (propAspect.checked) l.height = Math.round(l.width / l.aspectRatio);
-            updateProperties(); requestRender(); saveHistory(); 
-        } 
-    };
-    propH.onchange = (e) => { 
-        const l = getActiveLayer(); 
-        if (l) { 
-            l.height = parseFloat(e.target.value) || 10;
-            if (propAspect.checked) l.width = Math.round(l.height * l.aspectRatio);
-            updateProperties(); requestRender(); saveHistory(); 
-        } 
-    };
-    propRot.onchange = (e) => { const l = getActiveLayer(); if (l) { l.rotation = parseFloat(e.target.value) || 0; requestRender(); saveHistory(); } };
-    propOpacity.oninput = (e) => { 
-        const l = getActiveLayer(); 
-        if (l) { 
-            l.opacity = parseFloat(e.target.value); 
-            opacityVal.innerText = `${Math.round(l.opacity * 100)}%`; 
-            requestRender(); 
-        } 
-    };
-    propOpacity.onchange = saveHistory;
+    if (propX) propX.onchange = (e) => { const l = getActiveLayer(); if (l) { l.x = parseFloat(e.target.value) || 0; requestRender(); saveHistory(); } };
+    if (propY) propY.onchange = (e) => { const l = getActiveLayer(); if (l) { l.y = parseFloat(e.target.value) || 0; requestRender(); saveHistory(); } };
+    if (propW) {
+        propW.onchange = (e) => { 
+            const l = getActiveLayer(); 
+            if (l) { 
+                l.width = parseFloat(e.target.value) || 10;
+                if (propAspect.checked) l.height = Math.round(l.width / l.aspectRatio);
+                updateProperties(); requestRender(); saveHistory(); 
+            } 
+        };
+    }
+    if (propH) {
+        propH.onchange = (e) => { 
+            const l = getActiveLayer(); 
+            if (l) { 
+                l.height = parseFloat(e.target.value) || 10;
+                if (propAspect.checked) l.width = Math.round(l.height * l.aspectRatio);
+                updateProperties(); requestRender(); saveHistory(); 
+            } 
+        };
+    }
+    if (propRot) propRot.onchange = (e) => { const l = getActiveLayer(); if (l) { l.rotation = parseFloat(e.target.value) || 0; requestRender(); saveHistory(); } };
+    if (propOpacity) {
+        propOpacity.oninput = (e) => { 
+            const l = getActiveLayer(); 
+            if (l) { 
+                l.opacity = parseFloat(e.target.value); 
+                opacityVal.innerText = `${Math.round(l.opacity * 100)}%`; 
+                requestRender(); 
+            } 
+        };
+        propOpacity.onchange = saveHistory;
+    }
 
-    btnFlipH.onclick = () => { const l = getActiveLayer(); if (l) { l.flipX = !l.flipX; btnFlipH.classList.toggle('active', l.flipX); requestRender(); saveHistory(); } };
-    btnFlipV.onclick = () => { const l = getActiveLayer(); if (l) { l.flipY = !l.flipY; btnFlipV.classList.toggle('active', l.flipY); requestRender(); saveHistory(); } };
+    if (btnFlipH) btnFlipH.onclick = () => { const l = getActiveLayer(); if (l) { l.flipX = !l.flipX; btnFlipH.classList.toggle('active', l.flipX); requestRender(); saveHistory(); } };
+    if (btnFlipV) btnFlipV.onclick = () => { const l = getActiveLayer(); if (l) { l.flipY = !l.flipY; btnFlipV.classList.toggle('active', l.flipY); requestRender(); saveHistory(); } };
 
-    document.getElementById('zoom-in').onclick = () => setZoom(state.zoom * 1.2);
-    document.getElementById('zoom-out').onclick = () => setZoom(state.zoom / 1.2);
-    document.getElementById('zoom-50').onclick = () => setZoom(0.5);
-    document.getElementById('zoom-100').onclick = () => setZoom(1.0);
-    document.getElementById('zoom-200').onclick = () => setZoom(2.0);
-    document.getElementById('zoom-fit').onclick = fitCanvasToScreen;
+    const zIn = document.getElementById('zoom-in'); if (zIn) zIn.onclick = () => setZoom(state.zoom * 1.2);
+    const zOut = document.getElementById('zoom-out'); if (zOut) zOut.onclick = () => setZoom(state.zoom / 1.2);
+    const z50 = document.getElementById('zoom-50'); if (z50) z50.onclick = () => setZoom(0.5);
+    const z100 = document.getElementById('zoom-100'); if (z100) z100.onclick = () => setZoom(1.0);
+    const z200 = document.getElementById('zoom-200'); if (z200) z200.onclick = () => setZoom(2.0);
+    const zFit = document.getElementById('zoom-fit'); if (zFit) zFit.onclick = fitCanvasToScreen;
 
-    document.getElementById('btn-undo').onclick = undo;
-    document.getElementById('btn-redo').onclick = redo;
+    const uBtn = document.getElementById('btn-undo'); if (uBtn) uBtn.onclick = undo;
+    const rBtn = document.getElementById('btn-redo'); if (rBtn) rBtn.onclick = redo;
 
-    document.getElementById('btn-export-png').onclick = exportPNGDirect;
-    document.getElementById('btn-save-project').onclick = saveGuiIntoPackBuilder;
+    const expBtn = document.getElementById('btn-export-png'); if (expBtn) expBtn.onclick = exportPNGDirect;
+    const saveBtn = document.getElementById('btn-save-project'); if (saveBtn) saveBtn.onclick = saveGuiIntoPackBuilder;
 }
 
 function handleEditorImageUpload(files) {
@@ -558,7 +610,8 @@ function updateProperties() {
 
 function setZoom(val) {
     state.zoom = Math.min(Math.max(0.1, val), 8.0);
-    document.getElementById('zoom-value').innerText = `${Math.round(state.zoom * 100)}%`;
+    const zEl = document.getElementById('zoom-value');
+    if (zEl) zEl.innerText = `${Math.round(state.zoom * 100)}%`;
     requestRender();
 }
 
@@ -735,6 +788,15 @@ function saveGuiIntoPackBuilder() {
 
     const badge = document.getElementById(`badge-${state.currentGui.id}`);
     if (badge) badge.style.display = 'inline-block';
+
+    // Tự động tick hoàn thành checkbox và lưu vào localStorage
+    const chk = document.getElementById(`check-${state.currentGui.id}`);
+    if (chk) {
+        chk.checked = true;
+        const row = chk.closest('.tree-file-row');
+        if (row) row.classList.add('is-done');
+        setGuiDoneStatus(state.currentGui.id, true);
+    }
 
     updateBuilderStats();
     alert(`✅ Đã lưu GUI "${state.currentGui.name}" vào danh mục Pack Builder!\nĐường dẫn: ${state.currentGui.path}`);

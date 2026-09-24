@@ -707,3 +707,56 @@ canvas { display: block; image-rendering: pixelated; }
 .tree-children:hover {
     border-left-color: #404040;
 }
+/* ================= CHECKBOX ĐÁNH DẤU GUI HOÀN THÀNH ================= */
+.tree-gui-check {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid #6e7681;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    margin-right: 4px;
+    position: relative;
+    outline: none;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.tree-gui-check:hover {
+    border-color: #58a6ff;
+    background-color: rgba(88, 166, 255, 0.1);
+}
+
+.tree-gui-check:checked {
+    background-color: #238636;
+    border-color: #2ea043;
+}
+
+.tree-gui-check:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 3px;
+    height: 7px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* Đổi màu tên file khi đã đánh dấu hoàn thành */
+.tree-file-row.is-done .file-name {
+    color: #7ee787 !important; /* Xanh lá tươi */
+    font-weight: 500;
+}
+
+.tree-file-row.is-done::after {
+    content: "✓";
+    font-size: 11px;
+    color: #2ea043;
+    font-weight: bold;
+    margin-left: auto;
+    padding-right: 6px;
+}
