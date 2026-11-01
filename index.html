@@ -116,6 +116,31 @@
                     <h3>Thuộc tính Layer</h3>
                 </div>
                 <div class="properties-scroll">
+
+    <!-- ================= KHỐI TỈ LỆ GUI (GUI SCALE) MỚI ================= -->
+    <div class="prop-group gui-scale-box">
+        <label>📐 Tỉ lệ GUI (GUI Scale)</label>
+        <div class="input-row">
+            <div class="input-box" style="flex: 2;">
+                <span>Scale x</span>
+                <input type="number" id="prop-gui-scale" value="1" min="1" max="64" step="1">
+            </div>
+            <div class="scale-quick-btns">
+                <button type="button" class="btn-scale-tag" data-scale="1">1x</button>
+                <button type="button" class="btn-scale-tag" data-scale="2">2x</button>
+                <button type="button" class="btn-scale-tag" data-scale="4">4x</button>
+                <button type="button" class="btn-scale-tag" data-scale="7">7x</button>
+            </div>
+        </div>
+        <div class="gui-res-display" id="gui-res-display">Kích thước GUI: 256 × 256 px</div>
+        
+        <label class="checkbox-label" style="margin-top: 4px;">
+            <input type="checkbox" id="prop-auto-scale-bg" checked> 
+            <span>Tự tăng tỉ lệ theo ảnh nền (Gần nhất ≤ 2x ảnh)</span>
+        </label>
+    </div>
+    <div class="divider-hr"></div>
+
                     <div class="prop-group">
                         <label>Position</label>
                         <div class="input-row">

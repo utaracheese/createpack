@@ -1,4 +1,8 @@
 /* ================= GUI EDITOR ENGINE ================= */
+const propGuiScale = document.getElementById('prop-gui-scale');
+const propAutoScaleBg = document.getElementById('prop-auto-scale-bg');
+const guiResDisplay = document.getElementById('gui-res-display');
+
 const canvas = document.getElementById('main-canvas');
 const ctx = canvas.getContext('2d');
 const workspace = document.getElementById('workspace');
@@ -181,8 +185,12 @@ function selectGui(guiItem, folderName) {
 
     state.guiImage.onload = () => {
         state.guiLoaded = true;
-        state.guiWidth = state.guiImage.naturalWidth || 256;
-        state.guiHeight = state.guiImage.naturalHeight || 256;
+        state.baseGuiWidth = state.guiImage.naturalWidth || 256;
+        state.baseGuiHeight = state.guiImage.naturalHeight || 256;
+        state.guiWidth = Math.round(state.baseGuiWidth * state.guiScale);
+        state.guiHeight = Math.round(state.baseGuiHeight * state.guiScale);
+
+        updateGuiScaleUI();
         fitCanvasToScreen();
         renderLayersList();
         requestRender();
@@ -454,7 +462,21 @@ function initPropertyBindings() {
             if (e.target.files) handleEditorImageUpload(e.target.files);
         };
     }
+    if (propGuiScale) {
+    propGuiScale.onchange = (e) => {
+        const val = Math.max(1, parseFloat(e.target.value) || 1);
+        setGuiScale(val, true);
+        saveHistory();
+    };
+}
 
+document.querySelectorAll('.btn-scale-tag').forEach(btn => {
+    btn.onclick = () => {
+        const val = parseFloat(btn.dataset.scale);
+        setGuiScale(val, true);
+        saveHistory();
+    };
+});
     workspace.addEventListener('dragover', (e) => e.preventDefault());
     workspace.addEventListener('drop', (e) => {
         e.preventDefault();
@@ -543,12 +565,26 @@ function initPropertyBindings() {
 }
 
 function handleEditorImageUpload(files) {
-    Array.from(files).forEach(file => {
+    const isFirstLayer = state.layers.length === 0;
+
+    Array.from(files).forEach((file, index) => {
         if (!file.type.startsWith('image/')) return;
         const reader = new FileReader();
         reader.onload = (evt) => {
             const img = new Image();
             img.onload = () => {
+                // TỰ TĂNG TỈ LỆ THEO ẢNH ĐẦU TIÊN / ẢNH NỀN
+                if (propAutoScaleBg && propAutoScaleBg.checked && (isFirstLayer && index === 0)) {
+                    const maxDim = Math.max(img.width, img.height);
+                    const targetMax = maxDim * 2; // Gần nhất với kích thước ảnh x 2
+                    
+                    // Tính hệ số nguyên lớn nhất sao cho: baseGuiWidth * scale <= targetMax
+                    let autoScale = Math.floor(targetMax / state.baseGuiWidth);
+                    if (autoScale < 1) autoScale = 1;
+
+                    setGuiScale(autoScale, false);
+                }
+
                 const newLayer = {
                     id: 'layer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                     name: file.name,
@@ -563,6 +599,7 @@ function handleEditorImageUpload(files) {
                     flipY: false,
                     aspectRatio: img.width / img.height
                 };
+
                 state.layers.push(newLayer);
                 state.selectedLayerIndex = state.layers.length - 1;
                 renderLayersList();
@@ -800,4 +837,43 @@ function saveGuiIntoPackBuilder() {
 
     updateBuilderStats();
     alert(`✅ Đã lưu GUI "${state.currentGui.name}" vào danh mục Pack Builder!\nĐường dẫn: ${state.currentGui.path}`);
+}
+
+function setGuiScale(newScale, scaleLayers = true) {
+    newScale = Math.max(1, parseFloat(newScale) || 1);
+    const oldScale = state.guiScale;
+    if (newScale === oldScale && state.guiWidth === Math.round(state.baseGuiWidth * newScale)) {
+        return;
+    }
+
+    const ratio = newScale / oldScale;
+    state.guiScale = newScale;
+    state.guiWidth = Math.round(state.baseGuiWidth * newScale);
+    state.guiHeight = Math.round(state.baseGuiHeight * newScale);
+
+    // Đồng bộ kích thước và vị trí của các Layer hiện tại theo tỉ lệ mới
+    if (scaleLayers && ratio !== 1) {
+        state.layers.forEach(l => {
+            l.x = Math.round(l.x * ratio);
+            l.y = Math.round(l.y * ratio);
+            l.width = Math.round(l.width * ratio);
+            l.height = Math.round(l.height * ratio);
+        });
+    }
+
+    updateGuiScaleUI();
+    fitCanvasToScreen();
+    renderLayersList();
+    updateProperties();
+    requestRender();
+}
+
+function updateGuiScaleUI() {
+    if (propGuiScale) propGuiScale.value = state.guiScale;
+    if (guiResDisplay) {
+        guiResDisplay.innerText = `Kích thước GUI: ${state.guiWidth} × ${state.guiHeight} px (x${state.guiScale})`;
+    }
+    document.querySelectorAll('.btn-scale-tag').forEach(btn => {
+        btn.classList.toggle('active', parseFloat(btn.dataset.scale) === state.guiScale);
+    });
 }

@@ -760,3 +760,57 @@ canvas { display: block; image-rendering: pixelated; }
     margin-left: auto;
     padding-right: 6px;
 }
+
+/* ================= GUI SCALE TOOL STYLES ================= */
+.gui-scale-box {
+    background-color: rgba(88, 166, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.gui-res-display {
+    font-size: 11px;
+    color: #81c784;
+    font-weight: 600;
+    margin-top: 6px;
+    font-family: monospace;
+}
+
+.scale-quick-btns {
+    display: flex;
+    gap: 4px;
+    flex: 3;
+}
+
+.btn-scale-tag {
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-muted) !important;
+    border-radius: 4px;
+    cursor: pointer;
+    flex: 1;
+    justify-content: center;
+}
+
+.btn-scale-tag:hover {
+    color: #fff !important;
+    border-color: var(--accent-blue) !important;
+}
+
+.btn-scale-tag.active {
+    background-color: #1f6feb !important;
+    color: #ffffff !important;
+    border-color: #58a6ff !important;
+    font-weight: bold;
+}
+
+.divider-hr {
+    width: 100%;
+    height: 1px;
+    background-color: var(--border);
+    margin: 8px 0;
+}
