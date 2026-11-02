@@ -8,6 +8,7 @@ function saveHistory() {
         guiWidth: state.guiWidth,
         guiHeight: state.guiHeight
     });
+    lockFrame: state.lockFrame,
     state.history = state.history.slice(0, state.historyIndex + 1);
     state.history.push(snap);
     state.historyIndex = state.history.length - 1;
@@ -30,7 +31,17 @@ function restoreHistory(str) {
     const data = JSON.parse(str);
     state.guiLayerIndex = data.guiLayerIndex;
     state.selectedLayerIndex = data.selectedLayerIndex;
-    
+    if (data.lockFrame !== undefined) {
+    state.lockFrame = data.lockFrame;
+    const chk = document.getElementById('prop-lock-frame');
+    if (chk) {
+        chk.checked = state.lockFrame;
+        const group = chk.closest('.lock-frame-group');
+        if (group) group.classList.toggle('active', state.lockFrame);
+        const customDims = document.getElementById('custom-frame-dims');
+        if (customDims) customDims.style.display = state.lockFrame ? 'flex' : 'none';
+    }
+}
     if (data.guiScale) {
         state.guiScale = data.guiScale;
         state.guiWidth = data.guiWidth || (state.baseGuiWidth * state.guiScale);

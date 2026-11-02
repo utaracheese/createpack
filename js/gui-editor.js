@@ -1,3 +1,11 @@
+const propGuiScale = document.getElementById('prop-gui-scale');
+const propAutoScaleBg = document.getElementById('prop-auto-scale-bg');
+const autoScaleWrapper = document.getElementById('auto-scale-wrapper');
+const guiResDisplay = document.getElementById('gui-res-display');
+const propLockFrame = document.getElementById('prop-lock-frame');
+const customFrameDims = document.getElementById('custom-frame-dims');
+const propFrameW = document.getElementById('prop-frame-w');
+const propFrameH = document.getElementById('prop-frame-h');
 /* ================= GUI EDITOR ENGINE ================= */
 const propGuiScale = document.getElementById('prop-gui-scale');
 const propAutoScaleBg = document.getElementById('prop-auto-scale-bg');
@@ -187,8 +195,12 @@ function selectGui(guiItem, folderName) {
         state.guiLoaded = true;
         state.baseGuiWidth = state.guiImage.naturalWidth || 256;
         state.baseGuiHeight = state.guiImage.naturalHeight || 256;
-        state.guiWidth = Math.round(state.baseGuiWidth * state.guiScale);
-        state.guiHeight = Math.round(state.baseGuiHeight * state.guiScale);
+
+        // Nếu KHÔNG khóa khung hình thì mới gán lại width/height theo GUI được chọn
+        if (!state.lockFrame) {
+            state.guiWidth = Math.round(state.baseGuiWidth * state.guiScale);
+            state.guiHeight = Math.round(state.baseGuiHeight * state.guiScale);
+        }
 
         updateGuiScaleUI();
         fitCanvasToScreen();
@@ -230,6 +242,10 @@ function renderCanvas() {
     ctx.translate(state.panX, state.panY);
     ctx.scale(state.zoom, state.zoom);
 
+    // Vẽ nền mờ phân định vùng ngoài khung hình
+    ctx.fillStyle = '#18181c';
+    ctx.fillRect(0, 0, state.guiWidth, state.guiHeight);
+
     // Vẽ các Layer NẰM DƯỚI GUI
     for (let i = 0; i < state.guiLayerIndex; i++) {
         if (state.layers[i]) renderImageLayer(ctx, state.layers[i]);
@@ -244,6 +260,11 @@ function renderCanvas() {
     for (let i = state.guiLayerIndex; i < state.layers.length; i++) {
         if (state.layers[i]) renderImageLayer(ctx, state.layers[i]);
     }
+
+    // Vẽ viền khung hình cố định (Frame Border)
+    ctx.strokeStyle = state.lockFrame ? '#e3b341' : 'rgba(88, 166, 255, 0.4)';
+    ctx.lineWidth = 2 / state.zoom;
+    ctx.strokeRect(0, 0, state.guiWidth, state.guiHeight);
 
     if (state.selectedLayerIndex !== null && state.layers[state.selectedLayerIndex]) {
         drawBoundingBox(ctx, state.layers[state.selectedLayerIndex]);
@@ -456,6 +477,47 @@ window.deleteLayerAt = function(idx) {
 
 /* ================= 4. BINDINGS & CANVAS EVENTS ================= */
 function initPropertyBindings() {
+// Sự kiện Cố định khung hình
+    if (propLockFrame) {
+        propLockFrame.onchange = (e) => {
+            state.lockFrame = e.target.checked;
+            const group = propLockFrame.closest('.lock-frame-group');
+            if (group) group.classList.toggle('active', state.lockFrame);
+
+            // Ẩn/hiện ô nhập custom và khóa auto-scale
+            if (customFrameDims) customFrameDims.style.display = state.lockFrame ? 'flex' : 'none';
+            if (autoScaleWrapper) autoScaleWrapper.style.opacity = state.lockFrame ? '0.4' : '1';
+            if (propAutoScaleBg) propAutoScaleBg.disabled = state.lockFrame;
+
+            if (state.lockFrame) {
+                if (propFrameW) propFrameW.value = state.guiWidth;
+                if (propFrameH) propFrameH.value = state.guiHeight;
+            }
+            requestRender();
+        };
+    }
+
+    if (propFrameW) {
+        propFrameW.onchange = (e) => {
+            if (!state.lockFrame) return;
+            const val = Math.max(16, parseInt(e.target.value) || 256);
+            state.guiWidth = val;
+            updateGuiScaleUI();
+            requestRender();
+            saveHistory();
+        };
+    }
+
+    if (propFrameH) {
+        propFrameH.onchange = (e) => {
+            if (!state.lockFrame) return;
+            const val = Math.max(16, parseInt(e.target.value) || 256);
+            state.guiHeight = val;
+            updateGuiScaleUI();
+            requestRender();
+            saveHistory();
+        };
+    }
     const fileUpload = document.getElementById('unified-image-upload');
     if (fileUpload) {
         fileUpload.onchange = (e) => {
@@ -573,26 +635,36 @@ function handleEditorImageUpload(files) {
         reader.onload = (evt) => {
             const img = new Image();
             img.onload = () => {
-                // TỰ TĂNG TỈ LỆ THEO ẢNH ĐẦU TIÊN / ẢNH NỀN
-                if (propAutoScaleBg && propAutoScaleBg.checked && (isFirstLayer && index === 0)) {
+                // CHỈ TỰ TĂNG TỈ LỆ NẾU KHÔNG BẬT "CỐ ĐỊNH KHUNG HÌNH"
+                if (!state.lockFrame && propAutoScaleBg && propAutoScaleBg.checked && (isFirstLayer && index === 0)) {
                     const maxDim = Math.max(img.width, img.height);
-                    const targetMax = maxDim * 2; // Gần nhất với kích thước ảnh x 2
-                    
-                    // Tính hệ số nguyên lớn nhất sao cho: baseGuiWidth * scale <= targetMax
+                    const targetMax = maxDim * 2;
                     let autoScale = Math.floor(targetMax / state.baseGuiWidth);
                     if (autoScale < 1) autoScale = 1;
-
                     setGuiScale(autoScale, false);
+                }
+
+                // Tính toán kích thước ảnh ban đầu
+                let targetW = img.width;
+                let targetH = img.height;
+
+                // NẾU CỐ ĐỊNH KHUNG HÌNH: Tự thu nhỏ vừa khung nếu ảnh lớn hơn khung
+                if (state.lockFrame) {
+                    if (targetW > state.guiWidth || targetH > state.guiHeight) {
+                        const ratio = Math.min(state.guiWidth / targetW, state.guiHeight / targetH);
+                        targetW = Math.round(targetW * ratio);
+                        targetH = Math.round(targetH * ratio);
+                    }
                 }
 
                 const newLayer = {
                     id: 'layer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                     name: file.name,
                     img: img,
-                    x: Math.round((state.guiWidth - img.width) / 2),
-                    y: Math.round((state.guiHeight - img.height) / 2),
-                    width: img.width,
-                    height: img.height,
+                    x: Math.round((state.guiWidth - targetW) / 2),
+                    y: Math.round((state.guiHeight - targetH) / 2),
+                    width: targetW,
+                    height: targetH,
                     rotation: 0,
                     opacity: 1,
                     flipX: false,
@@ -870,8 +942,10 @@ function setGuiScale(newScale, scaleLayers = true) {
 
 function updateGuiScaleUI() {
     if (propGuiScale) propGuiScale.value = state.guiScale;
+    if (propFrameW) propFrameW.value = state.guiWidth;
+    if (propFrameH) propFrameH.value = state.guiHeight;
     if (guiResDisplay) {
-        guiResDisplay.innerText = `Kích thước GUI: ${state.guiWidth} × ${state.guiHeight} px (x${state.guiScale})`;
+        guiResDisplay.innerText = `Kích thước GUI: ${state.guiWidth} × ${state.guiHeight} px ${state.lockFrame ? '🔒 (Cố định)' : `(x${state.guiScale})`}`;
     }
     document.querySelectorAll('.btn-scale-tag').forEach(btn => {
         btn.classList.toggle('active', parseFloat(btn.dataset.scale) === state.guiScale);

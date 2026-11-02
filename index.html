@@ -117,9 +117,9 @@
                 </div>
                 <div class="properties-scroll">
 
-    <!-- ================= KHỐI TỈ LỆ GUI (GUI SCALE) MỚI ================= -->
+<!-- ================= KHỐI TỈ LỆ GUI & CỐ ĐỊNH KHUNG HÌNH ================= -->
     <div class="prop-group gui-scale-box">
-        <label>📐 Tỉ lệ GUI (GUI Scale)</label>
+        <label>📐 Tỉ lệ & Kích thước khung hình</label>
         <div class="input-row">
             <div class="input-box" style="flex: 2;">
                 <span>Scale x</span>
@@ -133,10 +133,22 @@
             </div>
         </div>
         <div class="gui-res-display" id="gui-res-display">Kích thước GUI: 256 × 256 px</div>
+
+        <!-- Cố định khung hình Toggle -->
+        <div class="lock-frame-group">
+            <label class="checkbox-label" style="margin-top: 6px; font-weight: bold; color: var(--accent-blue);">
+                <input type="checkbox" id="prop-lock-frame"> 
+                <span>🔒 Cố định khung hình</span>
+            </label>
+            <div id="custom-frame-dims" class="input-row" style="margin-top: 6px; display: none;">
+                <div class="input-box"><span>W</span><input type="number" id="prop-frame-w" value="256" min="16" step="1"></div>
+                <div class="input-box"><span>H</span><input type="number" id="prop-frame-h" value="256" min="16" step="1"></div>
+            </div>
+        </div>
         
-        <label class="checkbox-label" style="margin-top: 4px;">
+        <label class="checkbox-label" id="auto-scale-wrapper" style="margin-top: 6px;">
             <input type="checkbox" id="prop-auto-scale-bg" checked> 
-            <span>Tự tăng tỉ lệ theo ảnh nền (Gần nhất ≤ 2x ảnh)</span>
+            <span>Tự tăng tỉ lệ theo ảnh nền</span>
         </label>
     </div>
     <div class="divider-hr"></div>

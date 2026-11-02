@@ -1,5 +1,4 @@
 /* ================= 2. GLOBAL STATE ================= */
-/* ================= 2. GLOBAL STATE ================= */
 const state = {
     currentGui: null,
     guiImage: new Image(),
@@ -10,6 +9,9 @@ const state = {
     baseGuiHeight: 256,
     guiScale: 1, // Hệ số nhân tỉ lệ (x1, x2, x7,...)
     autoScaleByBg: true, // Tự động scale theo ảnh nền
+
+    // CỐ ĐỊNH KHUNG HÌNH (LOCK FRAME)
+    lockFrame: false,
 
     guiWidth: 256,
     guiHeight: 256,

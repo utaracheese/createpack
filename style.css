@@ -814,3 +814,21 @@ canvas { display: block; image-rendering: pixelated; }
     background-color: var(--border);
     margin: 8px 0;
 }
+
+/* ================= LOCK FRAME STYLES ================= */
+.lock-frame-group {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 8px;
+}
+
+.lock-frame-group.active {
+    border-color: var(--accent-blue);
+    background-color: rgba(88, 166, 255, 0.08);
+}
+
+#custom-frame-dims .input-box {
+    background-color: var(--bg-dark);
+}
