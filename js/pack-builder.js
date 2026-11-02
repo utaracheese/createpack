@@ -1,15 +1,9 @@
 /* ==========================================================================
    PACK BUILDER MODULE - MINECRAFT RESOURCE PACK STUDIO
-   Hỗ trợ: Thêm Items, Blocks, GUI, Skybox, nạp ZIP/RAR/JSON và xuất ZIP chuẩn
-   ========================================================================== */
-
-/* ==========================================================================
-   PACK BUILDER MODULE - MINECRAFT RESOURCE PACK STUDIO
-   Hỗ trợ: Items, Blocks, GUI, Skybox, nạp .ZIP / .JSON và xuất ZIP chuẩn
    ========================================================================== */
 
 function initPackBuilderFull() {
-    // Gợi ý ID
+    // 1. Gợi ý ID
     if (typeof PRESET_IDS !== 'undefined') {
         const itemDatalist = document.getElementById("item-suggestions");
         if (itemDatalist && PRESET_IDS.items) {
@@ -27,7 +21,7 @@ function initPackBuilderFull() {
         }
     }
 
-    // Phiên bản Minecraft
+    // 2. Cấu hình Minecraft Versions
     const selectSingle = document.getElementById("mcVersionSingle");
     const selectMin = document.getElementById("mcMinVersion");
     const selectMax = document.getElementById("mcMaxVersion");
@@ -67,7 +61,7 @@ function initPackBuilderFull() {
         updateMaxVersionOptions();
     }
 
-    // Radio chuyển đổi Version
+    // 3. Radio chuyển đổi Version
     document.querySelectorAll('input[name="verMode"]').forEach(radio => {
         radio.onchange = (e) => {
             const isSingle = e.target.value === 'single';
@@ -78,7 +72,7 @@ function initPackBuilderFull() {
         };
     });
 
-    // Icon Pack
+    // 4. Icon Pack
     const iconInput = document.getElementById("packIconInput");
     const uploadIconBtn = document.getElementById("uploadIconBtn");
     const iconPreviewWrapper = document.getElementById("packIconPreviewWrapper");
@@ -130,7 +124,7 @@ function initPackBuilderFull() {
         };
     }
 
-    // ================= NẠP DỰ ÁN (.JSON / .ZIP) =================
+    // ================= NẠP DỰ ÁN (.JSON / .ZIP / .RAR) =================
     const uploadInput = document.getElementById('upload-project-json');
     if (uploadInput) {
         uploadInput.onchange = async (e) => {
@@ -139,7 +133,6 @@ function initPackBuilderFull() {
 
             const fileName = file.name.toLowerCase();
 
-            // A. Nạp file .JSON
             if (fileName.endsWith('.json')) {
                 const r = new FileReader();
                 r.onload = (evt) => {
@@ -179,19 +172,17 @@ function initPackBuilderFull() {
                 };
                 r.readAsText(file);
             } 
-            // B. Nạp file .ZIP
-            else if (fileName.endsWith('.zip')) {
-                await extractAndLoadPackZip(file);
+            else if (fileName.endsWith('.zip') || fileName.endsWith('.rar')) {
+                await extractAndLoadPackArchive(file);
             } else {
-                alert("Vui lòng chọn file định dạng .zip hoặc .json!");
+                alert("Vui lòng chọn file định dạng .zip, .rar hoặc .json!");
             }
 
             uploadInput.value = '';
         };
     }
 
-    // ================= THÊM THỦ CÔNG & BATCH =================
-    // Items
+    // ================= THÊM ITEMS =================
     const addItemBtn = document.getElementById("add-item-btn");
     if (addItemBtn) {
         addItemBtn.onclick = () => {
@@ -237,7 +228,7 @@ function initPackBuilderFull() {
         }, () => { renderItemGrid(); updateBuilderStats(); });
     });
 
-    // Blocks
+    // ================= THÊM BLOCKS =================
     const addBlockBtn = document.getElementById("add-block-btn");
     if (addBlockBtn) {
         addBlockBtn.onclick = () => {
@@ -267,7 +258,7 @@ function initPackBuilderFull() {
         }, () => { renderBlockGrid(); updateBuilderStats(); });
     });
 
-    // Container GUI
+    // ================= CONTAINER GUI =================
     const addGuiContainerBtn = document.getElementById("add-gui-container-btn");
     if (addGuiContainerBtn) {
         addGuiContainerBtn.onclick = () => {
@@ -297,7 +288,7 @@ function initPackBuilderFull() {
         }, () => { renderGuiContainerGrid(); updateBuilderStats(); });
     });
 
-    // Root GUI
+    // ================= ROOT GUI =================
     const addGuiRootBtn = document.getElementById("add-gui-root-btn");
     if (addGuiRootBtn) {
         addGuiRootBtn.onclick = () => {
@@ -327,7 +318,7 @@ function initPackBuilderFull() {
         }, () => { renderGuiRootGrid(); updateBuilderStats(); });
     });
 
-    // Skybox
+    // ================= SKYBOX =================
     const addSkyBtn = document.getElementById('btn-add-skybox');
     if (addSkyBtn) {
         addSkyBtn.onclick = () => {
@@ -376,7 +367,7 @@ source=./${skyName}.png`;
         };
     }
 
-    // Clear Project
+    // ================= CLEAR & SAVE & BUILD =================
     const clearBtn = document.getElementById('btn-clear-project');
     if (clearBtn) {
         clearBtn.onclick = () => {
@@ -394,7 +385,6 @@ source=./${skyName}.png`;
         };
     }
 
-    // Save JSON
     const downloadJsonBtn = document.getElementById('btn-download-project-json');
     if (downloadJsonBtn) {
         downloadJsonBtn.onclick = () => {
@@ -422,37 +412,62 @@ source=./${skyName}.png`;
         };
     }
 
-    // Build ZIP
     const buildZipBtn = document.getElementById('btn-build-zip');
     if (buildZipBtn) buildZipBtn.onclick = buildAndDownloadZip;
 }
 
-// ================= GIẢI NÉN FILE .ZIP (100% OFFLINE & MƯỢT) =================
-async function extractAndLoadPackZip(file) {
+// ================= GIẢI NÉN ARCHIVE (.ZIP & .RAR) =================
+async function extractAndLoadPackArchive(file) {
     const loadingOverlay = document.getElementById('ai-loading-overlay');
     const titleEl = document.getElementById('ai-loading-title');
     const descEl = document.getElementById('ai-loading-desc');
 
-    if (titleEl) titleEl.innerText = "Đang giải nén Resource Pack (.ZIP)...";
-    if (descEl) descEl.innerText = "Đang đọc các file texture Minecraft...";
+    const isRar = file.name.toLowerCase().endsWith('.rar');
+    if (titleEl) titleEl.innerText = "Đang giải nén Resource Pack...";
+    if (descEl) descEl.innerText = `Đang đọc nội dung file ${isRar ? 'RAR' : 'ZIP'}...`;
     if (loadingOverlay) loadingOverlay.style.display = 'flex';
 
     try {
-        const zip = await JSZip.loadAsync(file);
         const fileEntries = new Map();
-        const entries = Object.keys(zip.files);
 
-        for (const path of entries) {
-            if (!zip.files[path].dir) {
-                const u8 = await zip.files[path].async("uint8array");
-                fileEntries.set(path.replace(/\\/g, '/'), u8);
+        if (!isRar) {
+            const zip = await JSZip.loadAsync(file);
+            const entries = Object.keys(zip.files);
+            for (const path of entries) {
+                if (!zip.files[path].dir) {
+                    const u8 = await zip.files[path].async("uint8array");
+                    fileEntries.set(path.replace(/\\/g, '/'), u8);
+                }
+            }
+        } else {
+            if (window.location.protocol === 'file:') {
+                throw new Error("Trình duyệt chặn giải nén file .RAR khi mở qua file:/// (CORS Policy). Hãy dùng file .ZIP hoặc chạy qua Live Server.");
+            }
+
+            let unrarModule = window.unrar;
+            if (!unrarModule) {
+                unrarModule = await import('https://cdn.jsdelivr.net/npm/node-unrar-js@2.0.2/+esm');
+            }
+
+            const wasmRes = await fetch('https://cdn.jsdelivr.net/npm/node-unrar-js@2.0.2/dist/wasm/unrar.wasm');
+            const wasmBinary = await wasmRes.arrayBuffer();
+            const arrayBuffer = await file.arrayBuffer();
+            
+            const createExtractor = unrarModule.createExtractorFromData || window.createExtractorFromData;
+            if (!createExtractor) throw new Error("Trình giải nén RAR chưa sẵn sàng!");
+
+            const extractor = await createExtractor({ data: arrayBuffer, wasmBinary });
+            const extracted = extractor.extract();
+            for (const entry of [...extracted.files]) {
+                if (!entry.fileHeader.flags.directory && entry.extraction) {
+                    fileEntries.set(entry.fileHeader.name.replace(/\\/g, '/'), entry.extraction);
+                }
             }
         }
 
-        // Đặt lại state
         state.builderAssets = { items: [], blocks: [], guisContainer: [], guisRoot: [], skybox: [] };
         state.packIconDataUrl = null;
-        document.getElementById('pack-name').value = file.name.replace(/\.zip$/i, '');
+        document.getElementById('pack-name').value = file.name.replace(/\.(zip|rar)$/i, '');
 
         const textDecoder = new TextDecoder('utf-8');
 
@@ -466,7 +481,6 @@ async function extractAndLoadPackZip(file) {
             return `data:image/png;base64,${btoa(binary)}`;
         }
 
-        // 1. Đọc pack.mcmeta
         if (fileEntries.has('pack.mcmeta')) {
             try {
                 const metaText = textDecoder.decode(fileEntries.get('pack.mcmeta'));
@@ -497,7 +511,6 @@ async function extractAndLoadPackZip(file) {
             } catch (e) {}
         }
 
-        // 2. Đọc pack.png
         if (fileEntries.has('pack.png')) {
             state.packIconDataUrl = toBase64Png(fileEntries.get('pack.png'));
             const previewImg = document.getElementById("packIconPreview");
@@ -506,7 +519,6 @@ async function extractAndLoadPackZip(file) {
             if (removeBtn) removeBtn.style.display = "inline-block";
         }
 
-        // 3. Phân loại Textures
         for (const [path, u8Data] of fileEntries.entries()) {
             if (/^assets\/minecraft\/textures\/item\/[^\/]+\.png$/i.test(path)) {
                 const id = path.split('/').pop().replace(/\.png$/i, '').toLowerCase();
@@ -551,11 +563,10 @@ async function extractAndLoadPackZip(file) {
               `• Skybox: ${state.builderAssets.skybox.length}`);
     } catch (err) {
         if (loadingOverlay) loadingOverlay.style.display = 'none';
-        alert("❌ Lỗi khi đọc file ZIP: " + err.message);
+        alert("❌ Thông báo: " + err.message);
     }
 }
 
-// ================= CÁC HÀM TIỆN ÍCH =================
 function setupAutoIdFromFile(fileInputId, idInputId) {
     const f = document.getElementById(fileInputId);
     const idInput = document.getElementById(idInputId);
@@ -761,7 +772,7 @@ function updateBuilderStats() {
     if (sSky) sSky.innerText = `✓ ${state.builderAssets.skybox.length} Skybox`;
 }
 
-// ================= BUILD VÀ TẢI VỀ FILE .ZIP =================
+// ================= ĐÓNG GÓI VÀ TẢI ZIP =================
 async function buildAndDownloadZip() {
     if (typeof JSZip === 'undefined') {
         alert("Thiếu thư viện JSZip!");
@@ -815,466 +826,6 @@ async function buildAndDownloadZip() {
         zip.file(a.path, a.dataUrl.split(',')[1], { base64: true });
     });
 
-    state.builderAssets.skybox.forEach(a => {
-        zip.file(a.path, a.dataUrl.split(',')[1], { base64: true });
-        if (a.extraFiles) {
-            a.extraFiles.forEach(ef => {
-                if (ef.isImageDuplicate && ef.dataUrl) {
-                    zip.file(ef.path, ef.dataUrl.split(',')[1], { base64: true });
-                } else if (ef.content) {
-                    zip.file(ef.path, ef.content);
-                }
-            });
-        }
-    });
-
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${packName}.zip`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-}
-
-// ================= GIẢI NÉN FILE NÉN (.ZIP / .RAR) =================
-// ================= HÀM GIẢI NÉN FILE ARCHIVE (.ZIP & .RAR) =================
-async function extractAndLoadPackArchive(file) {
-    const loadingOverlay = document.getElementById('ai-loading-overlay');
-    const titleEl = document.getElementById('ai-loading-title');
-    const descEl = document.getElementById('ai-loading-desc');
-
-    const isRar = file.name.toLowerCase().endsWith('.rar');
-
-    if (titleEl) titleEl.innerText = "Đang giải nén Resource Pack...";
-    if (descEl) descEl.innerText = `Đang đọc nội dung file ${isRar ? 'RAR' : 'ZIP'}...`;
-    if (loadingOverlay) loadingOverlay.style.display = 'flex';
-
-    try {
-        const fileEntries = new Map();
-
-        // 1. XỬ LÝ FILE .ZIP
-        if (!isRar) {
-            const zip = await JSZip.loadAsync(file);
-            const entries = Object.keys(zip.files);
-            for (const path of entries) {
-                if (!zip.files[path].dir) {
-                    const u8 = await zip.files[path].async("uint8array");
-                    fileEntries.set(path.replace(/\\/g, '/'), u8);
-                }
-            }
-        } 
-        // 2. XỬ LÝ FILE .RAR
-        else {
-            // Kiểm tra nếu chạy trực tiếp qua file:///
-            if (window.location.protocol === 'file:') {
-                throw new Error("Trình duyệt chặn giải nén file .RAR khi mở qua file:/// (CORS Policy).\n\n👉 Cách xử lý nhanh: Vui lòng nén pack thành file .ZIP hoặc mở website qua Live Server (VS Code).");
-            }
-
-            let unrarModule = window.unrar;
-            if (!unrarModule) {
-                try {
-                    unrarModule = await import('https://unpkg.com/node-unrar-js@2.0.2/dist/js/index.js');
-                } catch (e) {
-                    unrarModule = await import('https://cdn.jsdelivr.net/npm/node-unrar-js@2.0.2/+esm');
-                }
-            }
-
-            // Tải WebAssembly
-            let wasmRes = await fetch('https://unpkg.com/node-unrar-js@2.0.2/dist/wasm/unrar.wasm');
-            if (!wasmRes.ok) {
-                wasmRes = await fetch('https://cdn.jsdelivr.net/npm/node-unrar-js@2.0.2/dist/wasm/unrar.wasm');
-            }
-            if (!wasmRes.ok) throw new Error("Không thể kết nối đến máy chủ giải nén WASM!");
-
-            const wasmBinary = await wasmRes.arrayBuffer();
-            const arrayBuffer = await file.arrayBuffer();
-            
-            const createExtractor = unrarModule.createExtractorFromData || window.createExtractorFromData;
-            if (!createExtractor) throw new Error("Trình giải nén RAR chưa sẵn sàng!");
-
-            const extractor = await createExtractor({ data: arrayBuffer, wasmBinary });
-            const extracted = extractor.extract();
-            const files = [...extracted.files];
-
-            for (const entry of files) {
-                if (!entry.fileHeader.flags.directory && entry.extraction) {
-                    fileEntries.set(entry.fileHeader.name.replace(/\\/g, '/'), entry.extraction);
-                }
-            }
-        }
-
-        // Đặt lại state danh sách tài nguyên
-        state.builderAssets = { items: [], blocks: [], guisContainer: [], guisRoot: [], skybox: [] };
-        state.packIconDataUrl = null;
-        document.getElementById('pack-name').value = file.name.replace(/\.(zip|rar)$/i, '');
-
-        const textDecoder = new TextDecoder('utf-8');
-
-        // Hàm chuyển byte array sang Base64
-        function toBase64Png(u8Array) {
-            let binary = '';
-            const len = u8Array.byteLength;
-            const chunk = 8192;
-            for (let i = 0; i < len; i += chunk) {
-                binary += String.fromCharCode.apply(null, u8Array.subarray(i, i + chunk));
-            }
-            return `data:image/png;base64,${btoa(binary)}`;
-        }
-
-        // A. Đọc pack.mcmeta
-        if (fileEntries.has('pack.mcmeta')) {
-            try {
-                const metaText = textDecoder.decode(fileEntries.get('pack.mcmeta'));
-                const metaJson = JSON.parse(metaText);
-                if (metaJson.pack) {
-                    if (metaJson.pack.description) {
-                        document.getElementById('pack-desc').value = typeof metaJson.pack.description === 'string'
-                            ? metaJson.pack.description
-                            : JSON.stringify(metaJson.pack.description);
-                    }
-                    if (metaJson.pack.pack_format !== undefined) {
-                        const rSingle = document.querySelector('input[name="verMode"][value="single"]');
-                        if (rSingle) { rSingle.checked = true; rSingle.dispatchEvent(new Event('change')); }
-                        const sSingle = document.getElementById('mcVersionSingle');
-                        if (sSingle) sSingle.value = metaJson.pack.pack_format;
-                    } else if (metaJson.pack.min_format !== undefined) {
-                        const rRange = document.querySelector('input[name="verMode"][value="range"]');
-                        if (rRange) { rRange.checked = true; rRange.dispatchEvent(new Event('change')); }
-                        const sMin = document.getElementById('mcMinVersion');
-                        const sMax = document.getElementById('mcMaxVersion');
-                        if (sMin) {
-                            sMin.value = metaJson.pack.min_format;
-                            sMin.dispatchEvent(new Event('change'));
-                        }
-                        if (sMax && metaJson.pack.max_format) sMax.value = metaJson.pack.max_format;
-                    }
-                }
-            } catch (e) {}
-        }
-
-        // B. Đọc pack.png
-        if (fileEntries.has('pack.png')) {
-            state.packIconDataUrl = toBase64Png(fileEntries.get('pack.png'));
-            const previewImg = document.getElementById("packIconPreview");
-            if (previewImg) previewImg.src = state.packIconDataUrl;
-            const removeBtn = document.getElementById("removeIconBtn");
-            if (removeBtn) removeBtn.style.display = "inline-block";
-        }
-
-        // C. Phân loại textures
-        for (const [path, u8Data] of fileEntries.entries()) {
-            if (/^assets\/minecraft\/textures\/item\/[^\/]+\.png$/i.test(path)) {
-                const id = path.split('/').pop().replace(/\.png$/i, '').toLowerCase();
-                const dataUrl = toBase64Png(u8Data);
-                const extraFiles = [];
-                if (fileEntries.has(`${path}.mcmeta`)) {
-                    extraFiles.push({ path: `${path}.mcmeta`, content: textDecoder.decode(fileEntries.get(`${path}.mcmeta`)) });
-                }
-                state.builderAssets.items.push({ id, path, dataUrl, extraFiles });
-            }
-            else if (/^assets\/minecraft\/textures\/block\/[^\/]+\.png$/i.test(path)) {
-                const id = path.split('/').pop().replace(/\.png$/i, '').toLowerCase();
-                state.builderAssets.blocks.push({ id, path, dataUrl: toBase64Png(u8Data) });
-            }
-            else if (/^assets\/minecraft\/textures\/gui\/container\/[^\/]+\.png$/i.test(path)) {
-                const id = path.split('/').pop().replace(/\.png$/i, '').toLowerCase();
-                state.builderAssets.guisContainer.push({ id, path, dataUrl: toBase64Png(u8Data) });
-            }
-            else if (/^assets\/minecraft\/textures\/gui\/[^\/]+\.png$/i.test(path)) {
-                const id = path.split('/').pop().replace(/\.png$/i, '').toLowerCase();
-                state.builderAssets.guisRoot.push({ id, path, dataUrl: toBase64Png(u8Data) });
-            }
-            else if (/^assets\/minecraft\/(optifine|mcpatcher)\/sky\/world0\/[^\/]+\.png$/i.test(path)) {
-                const id = path.split('/').pop().replace(/\.png$/i, '').toLowerCase();
-                const dataUrl = toBase64Png(u8Data);
-                const extraFiles = [];
-                const propPath = path.replace(/\.png$/i, '.properties');
-                if (fileEntries.has(propPath)) {
-                    extraFiles.push({ path: propPath, content: textDecoder.decode(fileEntries.get(propPath)) });
-                }
-                state.builderAssets.skybox.push({ id, path, dataUrl, extraFiles });
-            }
-        }
-
-        renderAllBuilderGrids();
-        if (loadingOverlay) loadingOverlay.style.display = 'none';
-
-        alert(`🎉 Đã tải Resource Pack thành công!\n` +
-              `• Items: ${state.builderAssets.items.length}\n` +
-              `• Blocks: ${state.builderAssets.blocks.length}\n` +
-              `• GUIs: ${state.builderAssets.guisContainer.length + state.builderAssets.guisRoot.length}\n` +
-              `• Skybox: ${state.builderAssets.skybox.length}`);
-    } catch (err) {
-        if (loadingOverlay) loadingOverlay.style.display = 'none';
-        alert("❌ Thông báo: " + err.message);
-    }
-}
-
-// ================= CÁC HÀM HỖ TRỢ & HIỂN THỊ DANH SÁCH =================
-function setupAutoIdFromFile(fileInputId, idInputId) {
-    const f = document.getElementById(fileInputId);
-    const idInput = document.getElementById(idInputId);
-    if (f && idInput) {
-        f.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file && (!idInput.value.trim() || idInput.value === 'recipe_book')) {
-                idInput.value = file.name.replace(/\.png$/i, '').toLowerCase().replace(/\s+/g, '_');
-            }
-        };
-    }
-}
-
-function setupBatchDropzone(dropzoneId, inputId, onFilesReady) {
-    const dropzone = document.getElementById(dropzoneId);
-    const input = document.getElementById(inputId);
-    if (!dropzone || !input) return;
-
-    dropzone.onclick = () => input.click();
-    input.onchange = (e) => {
-        if (e.target.files && e.target.files.length) {
-            onFilesReady(e.target.files);
-            input.value = '';
-        }
-    };
-    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-    dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover');
-        if (e.dataTransfer.files && e.dataTransfer.files.length) onFilesReady(e.dataTransfer.files);
-    });
-}
-
-function processBatchPngFiles(files, itemHandler, onComplete) {
-    const validFiles = Array.from(files).filter(f => f.type === 'image/png' || f.name.toLowerCase().endsWith('.png'));
-    if (!validFiles.length) return alert("Chỉ chấp nhận file ảnh định dạng .png!");
-
-    let loadedCount = 0;
-    validFiles.forEach(file => {
-        const rawName = file.name.replace(/\.png$/i, '').trim().toLowerCase().replace(/\s+/g, '_');
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            itemHandler(rawName, e.target.result);
-            loadedCount++;
-            if (loadedCount === validFiles.length) onComplete();
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-function renderAllBuilderGrids() {
-    renderItemGrid();
-    renderBlockGrid();
-    renderGuiContainerGrid();
-    renderGuiRootGrid();
-    renderSkyboxGrid();
-    updateBuilderStats();
-}
-
-function renderItemGrid() {
-    const grid = document.getElementById('builder-item-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    state.builderAssets.items.forEach((item, idx) => {
-        grid.appendChild(createAssetCard(
-            item,
-            (newId) => {
-                item.id = newId;
-                item.path = `assets/minecraft/textures/item/${newId}.png`;
-                if (item.extraFiles && item.extraFiles.length) {
-                    item.extraFiles[0].path = `assets/minecraft/textures/item/${newId}.png.mcmeta`;
-                }
-                renderItemGrid();
-            },
-            () => {
-                state.builderAssets.items.splice(idx, 1);
-                renderItemGrid(); updateBuilderStats();
-            }
-        ));
-    });
-}
-
-function renderBlockGrid() {
-    const grid = document.getElementById('builder-block-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    state.builderAssets.blocks.forEach((block, idx) => {
-        grid.appendChild(createAssetCard(
-            block,
-            (newId) => {
-                block.id = newId;
-                block.path = `assets/minecraft/textures/block/${newId}.png`;
-                renderBlockGrid();
-            },
-            () => {
-                state.builderAssets.blocks.splice(idx, 1);
-                renderBlockGrid(); updateBuilderStats();
-            }
-        ));
-    });
-}
-
-function renderGuiContainerGrid() {
-    const grid = document.getElementById('builder-gui-container-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    state.builderAssets.guisContainer.forEach((gui, idx) => {
-        grid.appendChild(createAssetCard(
-            gui,
-            (newId) => {
-                gui.id = newId;
-                gui.path = `assets/minecraft/textures/gui/container/${newId}.png`;
-                renderGuiContainerGrid();
-            },
-            () => {
-                state.builderAssets.guisContainer.splice(idx, 1);
-                renderGuiContainerGrid(); updateBuilderStats();
-            }
-        ));
-    });
-}
-
-function renderGuiRootGrid() {
-    const grid = document.getElementById('builder-gui-root-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    state.builderAssets.guisRoot.forEach((gui, idx) => {
-        grid.appendChild(createAssetCard(
-            gui,
-            (newId) => {
-                gui.id = newId;
-                gui.path = `assets/minecraft/textures/gui/${newId}.png`;
-                renderGuiRootGrid();
-            },
-            () => {
-                state.builderAssets.guisRoot.splice(idx, 1);
-                renderGuiRootGrid(); updateBuilderStats();
-            }
-        ));
-    });
-}
-
-function renderSkyboxGrid() {
-    const grid = document.getElementById('builder-skybox-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    state.builderAssets.skybox.forEach((sky, idx) => {
-        grid.appendChild(createAssetCard(
-            sky,
-            (newId) => {
-                sky.id = newId;
-                renderSkyboxGrid();
-            },
-            () => {
-                state.builderAssets.skybox.splice(idx, 1);
-                renderSkyboxGrid(); updateBuilderStats();
-            }
-        ));
-    });
-}
-
-function createAssetCard(asset, onRename, onRemove) {
-    const card = document.createElement('div');
-    card.className = 'asset-card';
-    
-    let extraLabel = '';
-    if (asset.extraFiles && asset.extraFiles.length) {
-        extraLabel = `<div style="font-size:10px; color:#81c784; margin-bottom:4px;">+${asset.extraFiles.length} file đính kèm (.mcmeta/.properties)</div>`;
-    }
-
-    card.innerHTML = `
-        <img src="${asset.dataUrl}" alt="${asset.id}">
-        <input type="text" class="card-rename-input" value="${asset.id}" title="Nhấp để sửa tên ID">
-        <div class="path-info">${asset.path}</div>
-        ${extraLabel}
-        <div class="asset-card-actions">
-            <button class="btn-danger remove-btn">Xóa</button>
-        </div>
-    `;
-
-    const renameInput = card.querySelector('.card-rename-input');
-    renameInput.onchange = (e) => {
-        const val = e.target.value.trim().toLowerCase().replace(/\s+/g, '_');
-        if (val) onRename(val);
-        else renameInput.value = asset.id;
-    };
-
-    card.querySelector('.remove-btn').onclick = onRemove;
-    return card;
-}
-
-function updateBuilderStats() {
-    const totalGuis = state.builderAssets.guisContainer.length + state.builderAssets.guisRoot.length;
-    const sItems = document.getElementById('stat-items');
-    const sBlocks = document.getElementById('stat-blocks');
-    const sGuis = document.getElementById('stat-guis');
-    const sSky = document.getElementById('stat-sky');
-
-    if (sItems) sItems.innerText = `✓ ${state.builderAssets.items.length} Items`;
-    if (sBlocks) sBlocks.innerText = `✓ ${state.builderAssets.blocks.length} Blocks`;
-    if (sGuis) sGuis.innerText = `✓ ${totalGuis} GUIs`;
-    if (sSky) sSky.innerText = `✓ ${state.builderAssets.skybox.length} Skybox`;
-}
-
-// ================= ĐÓNG GÓI VÀ XUẤT RESOURCE PACK ZIP =================
-async function buildAndDownloadZip() {
-    if (typeof JSZip === 'undefined') {
-        alert("Thiếu thư viện JSZip để đóng gói file ZIP!");
-        return;
-    }
-
-    const zip = new JSZip();
-    const packName = (document.getElementById('pack-name').value.trim() || 'ResourcePack').replace(/\s+/g, '_');
-    const mode = document.querySelector('input[name="verMode"]:checked').value;
-    const desc = document.getElementById('pack-desc').value.trim() || 'Created with Pack Studio';
-
-    let mcmeta = {};
-    if (mode === 'range') {
-        mcmeta = {
-            pack: {
-                description: desc,
-                min_format: parseInt(document.getElementById('mcMinVersion').value, 10),
-                max_format: parseInt(document.getElementById('mcMaxVersion').value, 10)
-            }
-        };
-    } else {
-        mcmeta = {
-            pack: {
-                pack_format: parseInt(document.getElementById('mcVersionSingle').value, 10),
-                description: desc
-            }
-        };
-    }
-    zip.file('pack.mcmeta', JSON.stringify(mcmeta, null, 2));
-
-    if (state.packIconDataUrl) {
-        zip.file('pack.png', state.packIconDataUrl.split(',')[1], { base64: true });
-    }
-
-    // Ghi Items
-    state.builderAssets.items.forEach(a => {
-        zip.file(a.path, a.dataUrl.split(',')[1], { base64: true });
-        if (a.extraFiles) {
-            a.extraFiles.forEach(ef => zip.file(ef.path, ef.content));
-        }
-    });
-
-    // Ghi Blocks
-    state.builderAssets.blocks.forEach(a => {
-        zip.file(a.path, a.dataUrl.split(',')[1], { base64: true });
-    });
-
-    // Ghi GUI Containers
-    state.builderAssets.guisContainer.forEach(a => {
-        zip.file(a.path, a.dataUrl.split(',')[1], { base64: true });
-    });
-
-    // Ghi GUI Root
-    state.builderAssets.guisRoot.forEach(a => {
-        zip.file(a.path, a.dataUrl.split(',')[1], { base64: true });
-    });
-
-    // Ghi Skybox
     state.builderAssets.skybox.forEach(a => {
         zip.file(a.path, a.dataUrl.split(',')[1], { base64: true });
         if (a.extraFiles) {

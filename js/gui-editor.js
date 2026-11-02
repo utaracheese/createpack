@@ -1,3 +1,4 @@
+/* ================= GUI EDITOR ENGINE ================= */
 const propGuiScale = document.getElementById('prop-gui-scale');
 const propAutoScaleBg = document.getElementById('prop-auto-scale-bg');
 const autoScaleWrapper = document.getElementById('auto-scale-wrapper');
@@ -6,10 +7,6 @@ const propLockFrame = document.getElementById('prop-lock-frame');
 const customFrameDims = document.getElementById('custom-frame-dims');
 const propFrameW = document.getElementById('prop-frame-w');
 const propFrameH = document.getElementById('prop-frame-h');
-/* ================= GUI EDITOR ENGINE ================= */
-const propGuiScale = document.getElementById('prop-gui-scale');
-const propAutoScaleBg = document.getElementById('prop-auto-scale-bg');
-const guiResDisplay = document.getElementById('gui-res-display');
 
 const canvas = document.getElementById('main-canvas');
 const ctx = canvas.getContext('2d');
@@ -30,7 +27,7 @@ const btnFlipV = document.getElementById('btn-flip-v');
 
 let draggedLayerItem = null;
 
-/* ================= 1. QUẢN LÝ LƯU TRỮ TRẠNG THÁI TICK (LOCALSTORAGE) ================= */
+/* ================= 1. QUẢN LÝ LƯU TRỮ TRẠNG THÁI TICK ================= */
 const GUI_DONE_STORAGE_KEY = 'mc_pack_studio_gui_checked_status';
 
 function getGuiDoneList() {
@@ -52,7 +49,7 @@ function setGuiDoneStatus(id, isDone) {
     localStorage.setItem(GUI_DONE_STORAGE_KEY, JSON.stringify(list));
 }
 
-/* ================= 2. THƯ MỤC CHUẨN VS CODE CÓ CHECKBOX ================= */
+/* ================= 2. THƯ MỤC CÂY GUI DẠNG VS CODE ================= */
 function initFolderTree() {
     const container = document.getElementById('folder-tree-container');
     if (!container) return;
@@ -60,7 +57,6 @@ function initFolderTree() {
 
     const rootWrapper = document.createElement('div');
     rootWrapper.className = 'vscode-tree';
-
     const doneList = getGuiDoneList();
 
     function createTreeNode(node, depth = 0) {
@@ -99,7 +95,6 @@ function initFolderTree() {
             itemContainer.appendChild(row);
             itemContainer.appendChild(childrenBox);
         } else {
-            // File ảnh (.png)
             row.dataset.id = node.id;
             row.dataset.name = node.name.toLowerCase();
 
@@ -115,7 +110,6 @@ function initFolderTree() {
                 <span class="badge-saved" style="display:none;" id="badge-${node.id}">Saved</span>
             `;
 
-            // Xử lý sự kiện click checkbox (ngăn chặn lan truyền click lên hàng)
             const checkbox = row.querySelector('.tree-gui-check');
             checkbox.onclick = (e) => {
                 e.stopPropagation();
@@ -124,7 +118,6 @@ function initFolderTree() {
                 setGuiDoneStatus(node.id, checked);
             };
 
-            // Chọn GUI khi bấm vào hàng
             row.onclick = (e) => {
                 e.stopPropagation();
                 document.querySelectorAll('.tree-file-row').forEach(r => r.classList.remove('active'));
@@ -141,7 +134,6 @@ function initFolderTree() {
     rootWrapper.appendChild(createTreeNode(GUI_TREE_DATA));
     container.appendChild(rootWrapper);
 
-    // Xử lý tìm kiếm trong Tree
     const searchInput = document.getElementById('gui-search');
     if (searchInput) {
         searchInput.oninput = (e) => {
@@ -150,7 +142,6 @@ function initFolderTree() {
                 const match = row.dataset.name.includes(term) || row.dataset.id.includes(term);
                 row.style.display = match ? 'flex' : 'none';
                 
-                // Tự động mở rộng thư mục cha nếu có file tìm thấy
                 if (match && term.length > 0) {
                     let parent = row.closest('.tree-children');
                     while (parent) {
@@ -162,14 +153,6 @@ function initFolderTree() {
                 }
             });
         };
-    }
-
-    // Tự động chọn file đầu tiên (anvil.png)
-    const firstFile = container.querySelector('.tree-file-row');
-    if (firstFile) {
-        firstFile.classList.add('active');
-        const anvilObj = { id: 'anvil', name: 'anvil.png', path: 'assets/minecraft/textures/gui/container/anvil.png', folder: 'textures/gui/container' };
-        selectGui(anvilObj, anvilObj.folder);
     }
 }
 
@@ -186,7 +169,8 @@ function getFallbackGui(name) {
 }
 
 function selectGui(guiItem, folderName) {
-    state.currentGui = { ...guiItem, folder: folderName };
+    if (!guiItem) return;
+    state.currentGui = { ...guiItem, folder: folderName || '' };
     state.guiLoaded = false;
     state.guiImage = new Image();
     state.guiImage.crossOrigin = 'Anonymous';
@@ -196,7 +180,6 @@ function selectGui(guiItem, folderName) {
         state.baseGuiWidth = state.guiImage.naturalWidth || 256;
         state.baseGuiHeight = state.guiImage.naturalHeight || 256;
 
-        // Nếu KHÔNG khóa khung hình thì mới gán lại width/height theo GUI được chọn
         if (!state.lockFrame) {
             state.guiWidth = Math.round(state.baseGuiWidth * state.guiScale);
             state.guiHeight = Math.round(state.baseGuiHeight * state.guiScale);
@@ -209,7 +192,20 @@ function selectGui(guiItem, folderName) {
     };
 
     state.guiImage.onerror = () => {
-        state.guiImage.src = getFallbackGui(guiItem.name);
+        state.guiImage.onload = () => {
+            state.guiLoaded = true;
+            state.baseGuiWidth = 256;
+            state.baseGuiHeight = 256;
+            if (!state.lockFrame) {
+                state.guiWidth = Math.round(state.baseGuiWidth * state.guiScale);
+                state.guiHeight = Math.round(state.baseGuiHeight * state.guiScale);
+            }
+            updateGuiScaleUI();
+            fitCanvasToScreen();
+            renderLayersList();
+            requestRender();
+        };
+        state.guiImage.src = getFallbackGui(guiItem.name || 'GUI');
     };
 
     state.guiImage.src = guiItem.path;
@@ -217,13 +213,13 @@ function selectGui(guiItem, folderName) {
 
 function fitCanvasToScreen() {
     const pad = 60;
-    const w = workspace.clientWidth - pad;
-    const h = workspace.clientHeight - pad;
+    const w = (workspace.clientWidth || 800) - pad;
+    const h = (workspace.clientHeight || 600) - pad;
     const sX = w / (state.guiWidth || 256);
     const sY = h / (state.guiHeight || 256);
     state.zoom = Math.min(sX, sY, 2.0) || 1;
-    state.panX = (workspace.clientWidth - state.guiWidth * state.zoom) / 2;
-    state.panY = (workspace.clientHeight - state.guiHeight * state.zoom) / 2;
+    state.panX = ((workspace.clientWidth || 800) - state.guiWidth * state.zoom) / 2;
+    state.panY = ((workspace.clientHeight || 600) - state.guiHeight * state.zoom) / 2;
     const zEl = document.getElementById('zoom-value');
     if (zEl) zEl.innerText = `${Math.round(state.zoom * 100)}%`;
 }
@@ -233,8 +229,8 @@ function requestRender() {
 }
 
 function renderCanvas() {
-    canvas.width = workspace.clientWidth;
-    canvas.height = workspace.clientHeight;
+    canvas.width = workspace.clientWidth || 800;
+    canvas.height = workspace.clientHeight || 600;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = false;
 
@@ -242,26 +238,21 @@ function renderCanvas() {
     ctx.translate(state.panX, state.panY);
     ctx.scale(state.zoom, state.zoom);
 
-    // Vẽ nền mờ phân định vùng ngoài khung hình
     ctx.fillStyle = '#18181c';
     ctx.fillRect(0, 0, state.guiWidth, state.guiHeight);
 
-    // Vẽ các Layer NẰM DƯỚI GUI
     for (let i = 0; i < state.guiLayerIndex; i++) {
         if (state.layers[i]) renderImageLayer(ctx, state.layers[i]);
     }
 
-    // Vẽ Khung GUI gốc
     if (state.guiLoaded) {
         ctx.drawImage(state.guiImage, 0, 0, state.guiWidth, state.guiHeight);
     }
 
-    // Vẽ các Layer NẰM TRÊN GUI
     for (let i = state.guiLayerIndex; i < state.layers.length; i++) {
         if (state.layers[i]) renderImageLayer(ctx, state.layers[i]);
     }
 
-    // Vẽ viền khung hình cố định (Frame Border)
     ctx.strokeStyle = state.lockFrame ? '#e3b341' : 'rgba(88, 166, 255, 0.4)';
     ctx.lineWidth = 2 / state.zoom;
     ctx.strokeRect(0, 0, state.guiWidth, state.guiHeight);
@@ -274,6 +265,7 @@ function renderCanvas() {
 }
 
 function renderImageLayer(context, layer) {
+    if (!layer.img) return;
     context.save();
     context.globalAlpha = layer.opacity;
 
@@ -329,7 +321,7 @@ function drawBoundingBox(context, t) {
     context.restore();
 }
 
-/* ================= 3. QUẢN LÝ LAYER VÀ KÉO THẢ (DRAG & DROP) ================= */
+/* ================= 3. QUẢN LÝ LAYER ================= */
 function renderLayersList() {
     const list = document.getElementById('layers-list');
     if (!list) return;
@@ -370,7 +362,7 @@ function createDraggableLayerRow(idx, tag) {
         <div style="display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;">
             <span class="drag-handle" style="cursor:grab;">☰</span>
             <span style="font-size:11px; color:#8b949e;">${tag}</span>
-            <span>${layer.name}</span>
+            <span>${layer ? layer.name : 'Layer'}</span>
         </div>
         <button class="btn-del-layer" style="padding:2px 6px; font-size:10px;">✕</button>
     `;
@@ -475,16 +467,14 @@ window.deleteLayerAt = function(idx) {
     requestRender();
 };
 
-/* ================= 4. BINDINGS & CANVAS EVENTS ================= */
+/* ================= 4. BINDINGS & SỰ KIỆN ================= */
 function initPropertyBindings() {
-// Sự kiện Cố định khung hình
     if (propLockFrame) {
         propLockFrame.onchange = (e) => {
             state.lockFrame = e.target.checked;
             const group = propLockFrame.closest('.lock-frame-group');
             if (group) group.classList.toggle('active', state.lockFrame);
 
-            // Ẩn/hiện ô nhập custom và khóa auto-scale
             if (customFrameDims) customFrameDims.style.display = state.lockFrame ? 'flex' : 'none';
             if (autoScaleWrapper) autoScaleWrapper.style.opacity = state.lockFrame ? '0.4' : '1';
             if (propAutoScaleBg) propAutoScaleBg.disabled = state.lockFrame;
@@ -500,8 +490,7 @@ function initPropertyBindings() {
     if (propFrameW) {
         propFrameW.onchange = (e) => {
             if (!state.lockFrame) return;
-            const val = Math.max(16, parseInt(e.target.value) || 256);
-            state.guiWidth = val;
+            state.guiWidth = Math.max(16, parseInt(e.target.value) || 256);
             updateGuiScaleUI();
             requestRender();
             saveHistory();
@@ -511,34 +500,36 @@ function initPropertyBindings() {
     if (propFrameH) {
         propFrameH.onchange = (e) => {
             if (!state.lockFrame) return;
-            const val = Math.max(16, parseInt(e.target.value) || 256);
-            state.guiHeight = val;
+            state.guiHeight = Math.max(16, parseInt(e.target.value) || 256);
             updateGuiScaleUI();
             requestRender();
             saveHistory();
         };
     }
+
     const fileUpload = document.getElementById('unified-image-upload');
     if (fileUpload) {
         fileUpload.onchange = (e) => {
             if (e.target.files) handleEditorImageUpload(e.target.files);
         };
     }
-    if (propGuiScale) {
-    propGuiScale.onchange = (e) => {
-        const val = Math.max(1, parseFloat(e.target.value) || 1);
-        setGuiScale(val, true);
-        saveHistory();
-    };
-}
 
-document.querySelectorAll('.btn-scale-tag').forEach(btn => {
-    btn.onclick = () => {
-        const val = parseFloat(btn.dataset.scale);
-        setGuiScale(val, true);
-        saveHistory();
-    };
-});
+    if (propGuiScale) {
+        propGuiScale.onchange = (e) => {
+            const val = Math.max(1, parseFloat(e.target.value) || 1);
+            setGuiScale(val, true);
+            saveHistory();
+        };
+    }
+
+    document.querySelectorAll('.btn-scale-tag').forEach(btn => {
+        btn.onclick = () => {
+            const val = parseFloat(btn.dataset.scale);
+            setGuiScale(val, true);
+            saveHistory();
+        };
+    });
+
     workspace.addEventListener('dragover', (e) => e.preventDefault());
     workspace.addEventListener('drop', (e) => {
         e.preventDefault();
@@ -635,7 +626,6 @@ function handleEditorImageUpload(files) {
         reader.onload = (evt) => {
             const img = new Image();
             img.onload = () => {
-                // CHỈ TỰ TĂNG TỈ LỆ NẾU KHÔNG BẬT "CỐ ĐỊNH KHUNG HÌNH"
                 if (!state.lockFrame && propAutoScaleBg && propAutoScaleBg.checked && (isFirstLayer && index === 0)) {
                     const maxDim = Math.max(img.width, img.height);
                     const targetMax = maxDim * 2;
@@ -644,11 +634,9 @@ function handleEditorImageUpload(files) {
                     setGuiScale(autoScale, false);
                 }
 
-                // Tính toán kích thước ảnh ban đầu
                 let targetW = img.width;
                 let targetH = img.height;
 
-                // NẾU CỐ ĐỊNH KHUNG HÌNH: Tự thu nhỏ vừa khung nếu ảnh lớn hơn khung
                 if (state.lockFrame) {
                     if (targetW > state.guiWidth || targetH > state.guiHeight) {
                         const ratio = Math.min(state.guiWidth / targetW, state.guiHeight / targetH);
@@ -694,22 +682,28 @@ function updateProperties() {
     const posText = document.getElementById('layer-pos-text');
 
     if (!l) {
-        propX.value = 0; propY.value = 0; propW.value = 0; propH.value = 0;
-        propRot.value = 0; propOpacity.value = 1; opacityVal.innerText = '100%';
-        btnFlipH.classList.remove('active'); btnFlipV.classList.remove('active');
+        if (propX) propX.value = 0; 
+        if (propY) propY.value = 0; 
+        if (propW) propW.value = 0; 
+        if (propH) propH.value = 0;
+        if (propRot) propRot.value = 0; 
+        if (propOpacity) propOpacity.value = 1; 
+        if (opacityVal) opacityVal.innerText = '100%';
+        if (btnFlipH) btnFlipH.classList.remove('active'); 
+        if (btnFlipV) btnFlipV.classList.remove('active');
         if (posText) posText.innerText = "Chưa chọn layer nào (Kéo thả danh sách trên để đổi tầng)";
         return;
     }
 
-    propX.value = Math.round(l.x);
-    propY.value = Math.round(l.y);
-    propW.value = Math.round(l.width);
-    propH.value = Math.round(l.height);
-    propRot.value = Math.round(l.rotation);
-    propOpacity.value = l.opacity;
-    opacityVal.innerText = `${Math.round(l.opacity * 100)}%`;
-    btnFlipH.classList.toggle('active', l.flipX);
-    btnFlipV.classList.toggle('active', l.flipY);
+    if (propX) propX.value = Math.round(l.x);
+    if (propY) propY.value = Math.round(l.y);
+    if (propW) propW.value = Math.round(l.width);
+    if (propH) propH.value = Math.round(l.height);
+    if (propRot) propRot.value = Math.round(l.rotation);
+    if (propOpacity) propOpacity.value = l.opacity;
+    if (opacityVal) opacityVal.innerText = `${Math.round(l.opacity * 100)}%`;
+    if (btnFlipH) btnFlipH.classList.toggle('active', l.flipX);
+    if (btnFlipV) btnFlipV.classList.toggle('active', l.flipY);
 
     const isAbove = state.selectedLayerIndex >= state.guiLayerIndex;
     if (posText) {
@@ -802,7 +796,7 @@ function initCanvasEvents() {
             if (state.activeHandle.includes('b')) nh += dy;
             if (state.activeHandle.includes('t')) nh -= dy;
 
-            if (propAspect.checked) {
+            if (propAspect && propAspect.checked) {
                 if (state.activeHandle.includes('r') || state.activeHandle.includes('l')) nh = nw / s.aspectRatio;
                 else nw = nh * s.aspectRatio;
             }
@@ -875,14 +869,15 @@ function renderFullComposite() {
 function exportPNGDirect() {
     const dataUrl = renderFullComposite();
     const link = document.createElement('a');
-    link.download = `${state.currentGui.id}.png`;
+    link.download = `${state.currentGui ? state.currentGui.id : 'gui'}.png`;
     link.href = dataUrl;
     link.click();
 }
 
 function saveGuiIntoPackBuilder() {
+    if (!state.currentGui) return alert("Chưa chọn GUI!");
     const dataUrl = renderFullComposite();
-    const isContainer = state.currentGui.folder.includes('container');
+    const isContainer = state.currentGui.folder && state.currentGui.folder.includes('container');
     const targetList = isContainer ? state.builderAssets.guisContainer : state.builderAssets.guisRoot;
 
     const existingIdx = targetList.findIndex(g => g.id === state.currentGui.id);
@@ -898,7 +893,6 @@ function saveGuiIntoPackBuilder() {
     const badge = document.getElementById(`badge-${state.currentGui.id}`);
     if (badge) badge.style.display = 'inline-block';
 
-    // Tự động tick hoàn thành checkbox và lưu vào localStorage
     const chk = document.getElementById(`check-${state.currentGui.id}`);
     if (chk) {
         chk.checked = true;
@@ -923,7 +917,6 @@ function setGuiScale(newScale, scaleLayers = true) {
     state.guiWidth = Math.round(state.baseGuiWidth * newScale);
     state.guiHeight = Math.round(state.baseGuiHeight * newScale);
 
-    // Đồng bộ kích thước và vị trí của các Layer hiện tại theo tỉ lệ mới
     if (scaleLayers && ratio !== 1) {
         state.layers.forEach(l => {
             l.x = Math.round(l.x * ratio);
